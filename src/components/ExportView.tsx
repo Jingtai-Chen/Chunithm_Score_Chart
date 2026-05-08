@@ -25,7 +25,7 @@ const GRADE_COLOR: Record<string, string> = {
 // 1200px canvas − 64px h-padding − 50px (5×10px gaps) = 1086 / 6 = 181px per card
 const CARD_W = 181
 const COVER_H = 181  // square cover, explicit px so html2canvas doesn't collapse it
-const INFO_H = 78    // fixed info section height: prevents cramping
+const INFO_H = 92    // tall enough for 2-line title + diff/grade row + score
 
 interface Props {
   exportRef: RefObject<HTMLDivElement>
@@ -184,16 +184,16 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
                 boxSizing: 'border-box',
                 overflow: 'hidden',
               }}>
-                {/* Title */}
+                {/* Title — 2-line block; fixed height clips overflow without ellipsis tricks */}
                 <div style={{
                   color: '#ffffff',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 600,
-                  lineHeight: '1.3',
+                  lineHeight: '1.35',
+                  height: '33px',       /* 12px × 1.35 × 2 lines ≈ 32.4px */
                   overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '100%',
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
                 }}>
                   {score.song.title}
                 </div>
