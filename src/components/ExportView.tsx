@@ -22,6 +22,11 @@ const GRADE_COLOR: Record<string, string> = {
   A:     '#94a3b8',
 }
 
+// 1200px canvas − 64px h-padding − 50px (5×10px gaps) = 1086 / 6 = 181px per card
+const CARD_W = 181
+const COVER_H = 181  // square cover, explicit px so html2canvas doesn't collapse it
+const INFO_H = 78    // fixed info section height: prevents cramping
+
 interface Props {
   exportRef: RefObject<HTMLDivElement>
   scores: UserScoreWithSong[]
@@ -48,39 +53,48 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
         background: '#0f0f1a',
         padding: '32px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
+        boxSizing: 'border-box',
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
         <div>
-          <div style={{ color: '#a78bfa', fontSize: '13px', marginBottom: '4px' }}>CHUNITHM Tracker</div>
-          <div style={{ color: '#ffffff', fontSize: '20px', fontWeight: 700 }}>{username}</div>
+          <div style={{ color: '#a78bfa', fontSize: '14px', marginBottom: '6px', letterSpacing: '0.05em' }}>
+            CHUNITHM Tracker
+          </div>
+          <div style={{ color: '#ffffff', fontSize: '24px', fontWeight: 700 }}>{username}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>B30 Rating</div>
-          <div style={{ color: '#a78bfa', fontSize: '40px', fontWeight: 800, lineHeight: 1 }}>
+          <div style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>B30 Rating</div>
+          <div style={{ color: '#a78bfa', fontSize: '48px', fontWeight: 800, lineHeight: 1 }}>
             {b30Rating.toFixed(2)}
           </div>
         </div>
       </div>
 
-      {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+      {/* Grid — explicit column widths so every card is the same size */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(6, ${CARD_W}px)`,
+        gap: '10px',
+      }}>
         {slots.map((score, i) => {
           if (!score) {
             return (
               <div
                 key={`e-${i}`}
                 style={{
+                  width: `${CARD_W}px`,
+                  height: `${COVER_H + INFO_H}px`,
                   borderRadius: '8px',
                   border: '1px dashed #2a2a40',
-                  aspectRatio: '1 / 1',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  boxSizing: 'border-box',
                 }}
               >
-                <span style={{ color: '#2a2a40', fontSize: '18px', fontWeight: 700 }}>#{i + 1}</span>
+                <span style={{ color: '#2a2a40', fontSize: '20px', fontWeight: 700 }}>#{i + 1}</span>
               </div>
             )
           }
@@ -94,33 +108,47 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
             <div
               key={score.id}
               style={{
+                width: `${CARD_W}px`,
                 borderRadius: '8px',
                 overflow: 'hidden',
                 background: '#18182a',
                 border: '1px solid #2a2a40',
+                boxSizing: 'border-box',
               }}
             >
-              {/* Cover */}
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1' }}>
+              {/* Cover — explicit height, NO aspectRatio (html2canvas ignores it) */}
+              <div style={{
+                position: 'relative',
+                width: `${CARD_W}px`,
+                height: `${COVER_H}px`,
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}>
                 {imgSrc ? (
                   <img
                     src={imgSrc}
                     alt={score.song.title}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    width={CARD_W}
+                    height={COVER_H}
+                    style={{ display: 'block', width: `${CARD_W}px`, height: `${COVER_H}px`, objectFit: 'cover' }}
                   />
                 ) : (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f0f1a', fontSize: '28px' }}>
+                  <div style={{
+                    width: `${CARD_W}px`, height: `${COVER_H}px`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#0f0f1a', fontSize: '36px',
+                  }}>
                     ♪
                   </div>
                 )}
 
-                {/* Rank */}
+                {/* Rank badge */}
                 <div style={{
-                  position: 'absolute', top: '6px', left: '6px',
-                  width: '22px', height: '22px', borderRadius: '50%',
+                  position: 'absolute', top: '7px', left: '7px',
+                  width: '26px', height: '26px', borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '11px', fontWeight: 700,
-                  background: isTop3 ? '#7c3aed' : 'rgba(0,0,0,0.6)',
+                  fontSize: '12px', fontWeight: 700,
+                  background: isTop3 ? '#7c3aed' : 'rgba(0,0,0,0.65)',
                   color: isTop3 ? '#fff' : '#94a3b8',
                 }}>
                   {i + 1}
@@ -129,39 +157,67 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
                 {/* Lamp dot */}
                 {score.lamp !== 'NONE' && (
                   <div style={{
-                    position: 'absolute', top: '6px', right: '6px',
-                    width: '10px', height: '10px', borderRadius: '50%',
+                    position: 'absolute', top: '10px', right: '10px',
+                    width: '12px', height: '12px', borderRadius: '50%',
                     background: score.lamp === 'AJC' || score.lamp === 'AJ' ? '#a78bfa' : '#4ade80',
                   }} />
                 )}
 
-                {/* Rating */}
+                {/* Song rating overlay */}
                 <div style={{
-                  position: 'absolute', bottom: '6px', right: '6px',
-                  fontSize: '11px', fontWeight: 700,
-                  padding: '2px 6px', borderRadius: '4px',
-                  background: 'rgba(0,0,0,0.72)', color: '#a78bfa',
+                  position: 'absolute', bottom: '7px', right: '7px',
+                  fontSize: '13px', fontWeight: 700,
+                  padding: '3px 7px', borderRadius: '5px',
+                  background: 'rgba(0,0,0,0.75)', color: '#a78bfa',
                 }}>
                   {score.song_rating.toFixed(2)}
                 </div>
               </div>
 
-              {/* Info */}
-              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <p style={{ color: '#fff', fontSize: '11px', fontWeight: 500, margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+              {/* Info section — fixed height to guarantee it's never cut off */}
+              <div style={{
+                height: `${INFO_H}px`,
+                padding: '8px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box',
+                overflow: 'hidden',
+              }}>
+                {/* Title */}
+                <div style={{
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  lineHeight: '1.3',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%',
+                }}>
                   {score.song.title}
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                </div>
+
+                {/* Difficulty chip + grade */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                   <span style={{
-                    fontSize: '10px', padding: '1px 5px', borderRadius: '3px', fontWeight: 500,
+                    fontSize: '11px', fontWeight: 600,
+                    padding: '2px 6px', borderRadius: '4px',
                     background: diff.bg, color: diff.text,
-                    border: diff.border ? `1px solid ${diff.border}` : undefined,
+                    border: diff.border ? `1px solid ${diff.border}` : 'none',
+                    whiteSpace: 'nowrap',
                   }}>
                     {score.difficulty}
                   </span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: gradeColor }}>{score.grade}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: gradeColor }}>
+                    {score.grade}
+                  </span>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '10px', margin: 0 }}>{score.score.toLocaleString()}</p>
+
+                {/* Score */}
+                <div style={{ color: '#94a3b8', fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                  {score.score.toLocaleString()}
+                </div>
               </div>
             </div>
           )
@@ -169,7 +225,7 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
       </div>
 
       {/* Watermark */}
-      <div style={{ marginTop: '20px', textAlign: 'center', color: '#2a2a40', fontSize: '12px' }}>
+      <div style={{ marginTop: '24px', textAlign: 'center', color: '#3a3a55', fontSize: '13px' }}>
         CHUNITHM Tracker
       </div>
     </div>
