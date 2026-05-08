@@ -142,45 +142,60 @@ export default function ExportView({ exportRef, scores, username, coverDataUrls 
                   </div>
                 )}
 
-                {/* Rank badge */}
+                {/*
+                  Overlay: full-size flex column over the cover.
+                  Uses justify-content:space-between so the top row (rank+lamp)
+                  and bottom row (rating) sit in the correct corners without
+                  relying on `bottom` or `right` absolute values, which
+                  html2canvas can miscompute.
+                */}
                 <div style={{
-                  position: 'absolute', top: '7px', left: '7px',
-                  width: '26px', height: '26px', borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '12px', fontWeight: 700,
-                  background: isTop3 ? '#7c3aed' : 'rgba(0,0,0,0.65)',
-                  color: isTop3 ? '#fff' : '#94a3b8',
+                  position: 'absolute', top: 0, left: 0,
+                  width: `${CARD_W}px`, height: `${COVER_H}px`,
+                  display: 'flex', flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  boxSizing: 'border-box',
+                  padding: '7px',
                 }}>
-                  {i + 1}
-                </div>
+                  {/* Top row: rank badge (left) + lamp dot (right) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '26px', height: '26px', borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '12px', fontWeight: 700,
+                      background: isTop3 ? '#7c3aed' : 'rgba(0,0,0,0.65)',
+                      color: isTop3 ? '#fff' : '#94a3b8',
+                    }}>
+                      {i + 1}
+                    </div>
+                    {score.lamp !== 'NONE' ? (
+                      <div style={{
+                        width: '12px', height: '12px', borderRadius: '50%', marginTop: '7px',
+                        background: score.lamp === 'AJC' || score.lamp === 'AJ' ? '#a78bfa' : '#4ade80',
+                      }} />
+                    ) : <div />}
+                  </div>
 
-                {/* Lamp dot */}
-                {score.lamp !== 'NONE' && (
-                  <div style={{
-                    position: 'absolute', top: '10px', right: '10px',
-                    width: '12px', height: '12px', borderRadius: '50%',
-                    background: score.lamp === 'AJC' || score.lamp === 'AJ' ? '#a78bfa' : '#4ade80',
-                  }} />
-                )}
-
-                {/* Song rating overlay */}
-                <div style={{
-                  position: 'absolute', bottom: '7px', right: '7px',
-                  fontSize: '13px', fontWeight: 700,
-                  padding: '3px 7px', borderRadius: '5px',
-                  background: 'rgba(0,0,0,0.75)', color: '#a78bfa',
-                }}>
-                  {score.song_rating.toFixed(2)}
+                  {/* Bottom row: rating pill (right-aligned) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{
+                      fontSize: '13px', fontWeight: 700,
+                      padding: '3px 7px', borderRadius: '5px',
+                      background: 'rgba(0,0,0,0.75)', color: '#a78bfa',
+                    }}>
+                      {score.song_rating.toFixed(2)}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Info section — fixed height to guarantee it's never cut off */}
+              {/* Info section — flex column with fixed gap, no space-between */}
               <div style={{
                 height: `${INFO_H}px`,
-                padding: '8px 10px',
+                padding: '7px 10px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
+                gap: '5px',
                 boxSizing: 'border-box',
                 overflow: 'hidden',
               }}>
