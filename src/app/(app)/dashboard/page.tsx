@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import B30Grid from '@/components/B30Grid'
-import UserMenu from '@/components/UserMenu'
+import DashboardClient from '@/components/DashboardClient'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -17,22 +16,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#0f0f1a' }}>
-      <header
-        className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
-        style={{ background: '#0f0f1a', borderBottom: '1px solid #2a2a40' }}
-      >
-        <span className="font-bold text-white text-lg tracking-wide">CHUNITHM Tracker</span>
-        <UserMenu
-          userId={user.id}
-          username={profile?.username ?? ''}
-          email={user.email ?? ''}
-          avatarUrl={profile?.avatar_url ?? null}
-        />
-      </header>
-
-      <main>
-        <B30Grid />
-      </main>
+      <DashboardClient
+        userId={user.id}
+        username={profile?.username ?? ''}
+        email={user.email ?? ''}
+        avatarUrl={profile?.avatar_url ?? null}
+      />
     </div>
   )
 }

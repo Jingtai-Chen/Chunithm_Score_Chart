@@ -12,6 +12,12 @@ describe('calcSongRating', () => {
   test('score 1007500 → const + 2.00', () => {
     expect(calcSongRating(1_007_500, CONST)).toBeCloseTo(16.00)
   })
+  test('score 1008700, const 15.6 → 17.72', () => {
+    expect(calcSongRating(1_008_700, 15.6)).toBeCloseTo(17.72)
+  })
+  test('score 1008000, const 15.6 → 17.65', () => {
+    expect(calcSongRating(1_008_000, 15.6)).toBeCloseTo(17.65)
+  })
   test('score 1005000 → const + 1.50', () => {
     expect(calcSongRating(1_005_000, CONST)).toBeCloseTo(15.50)
   })

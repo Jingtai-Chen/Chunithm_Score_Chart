@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { UserScoreWithSong, Song, Difficulty } from '@/types'
 import ScoreCard from './ScoreCard'
@@ -8,8 +8,17 @@ import StatsBar from './StatsBar'
 import SearchModal from './modals/SearchModal'
 import DifficultyModal from './modals/DifficultyModal'
 import ScoreModal from './modals/ScoreModal'
+import ExportView from './ExportView'
 
+const COVER_BASE = 'https://dp4p6x0xfi5o9.cloudfront.net/chunithm/img/cover'
 const SLOTS = 30
+
+export type B30GridHandle = { triggerExport: () => void }
+
+interface Props {
+  username: string
+  onExportingChange?: (v: boolean) => void
+}
 
 function SkeletonCard() {
   return (
@@ -40,13 +49,27 @@ function EmptyCard({ rank }: { rank: number }) {
 
 type Step = 1 | 2 | 3 | null
 
-export default function B30Grid() {
+const B30Grid = forwardRef<B30GridHandle, Props>(function B30Grid({ username, onExportingChange }, ref) {
   const [scores, setScores] = useState<UserScoreWithSong[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [step, setStep] = useState<Step>(null)
   const [selectedSong, setSelectedSong] = useState<Song | null>(null)
   const [selectedDiff, setSelectedDiff] = useState<Difficulty | null>(null)
+
+  const [exporting, setExporting] = useState(false)
+  const [exportReady, setExportReady] = useState(false)
+  const [coverDataUrls, setCoverDataUrls] = useState<Record<string, string>>({})
+  const exportRef = useRef<HTMLDivElement>(null)
+
+  // Keep a ref to handleExport so useImperativeHandle never goes stale
+  const handleExportRef = useRef<() => void>(() => {})
+
+  useEffect(() => { onExportingChange?.(exporting) }, [exporting, onExportingChange])
+
+  useImperativeHandle(ref, () => ({
+    triggerExport: () => handleExportRef.current(),
+  }))
 
   async function fetchScores() {
     try {
@@ -64,6 +87,80 @@ export default function B30Grid() {
   }
 
   useEffect(() => { fetchScores() }, [])
+
+  // Fire html2canvas once ExportView is rendered with data URLs
+  useEffect(() => {
+    if (!exportReady || !exportRef.current) return
+
+    let cancelled = false
+
+    async function capture() {
+      if (!exportRef.current) return
+      try {
+        const { default: html2canvas } = await import('html2canvas')
+        const canvas = await html2canvas(exportRef.current, {
+          scale: 2,
+          backgroundColor: '#0f0f1a',
+          useCORS: false,
+          allowTaint: false,
+        })
+        if (cancelled) return
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+        const link = document.createElement('a')
+        link.download = `b30_${username}_${date}.png`
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+        toast.success('图片已保存！')
+      } catch {
+        if (!cancelled) toast.error('Export failed. Please try again.')
+      } finally {
+        if (!cancelled) {
+          setExporting(false)
+          setExportReady(false)
+          setCoverDataUrls({})
+        }
+      }
+    }
+
+    capture()
+    return () => { cancelled = true }
+  }, [exportReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleExport() {
+    if (exporting) return
+    if (scores.length === 0) {
+      toast.error('No scores to export.')
+      return
+    }
+    setExporting(true)
+
+    const top30 = scores.slice(0, 30)
+    const imageNames = Array.from(new Set(top30.map(s => s.song.image_name).filter(Boolean))) as string[]
+
+    const entries = await Promise.all(
+      imageNames.map(async name => {
+        try {
+          const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(`${COVER_BASE}/${name}`)}`)
+          if (!res.ok) return [name, ''] as [string, string]
+          const blob = await res.blob()
+          const dataUrl = await new Promise<string>(resolve => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+          return [name, dataUrl] as [string, string]
+        } catch {
+          return [name, ''] as [string, string]
+        }
+      })
+    )
+
+    setCoverDataUrls(Object.fromEntries(entries))
+    setExportReady(true)
+  }
+
+  // Always point the ref at the latest handleExport closure
+  handleExportRef.current = handleExport
 
   function closeModal() {
     setStep(null)
@@ -84,18 +181,13 @@ export default function B30Grid() {
     <div className="flex flex-col gap-6 px-6 py-5">
       <StatsBar scores={scores} onAdd={() => setStep(1)} />
 
-      {/* Empty state hint for new users */}
       {isEmpty && (
-        <div
-          className="rounded-xl py-12 text-center"
-          style={{ border: '1px dashed #2a2a40' }}
-        >
+        <div className="rounded-xl py-12 text-center" style={{ border: '1px dashed #2a2a40' }}>
           <p className="text-slate-300 font-medium mb-1">No scores yet</p>
           <p className="text-slate-500 text-sm">Click "+ 添加成绩" to record your first score.</p>
         </div>
       )}
 
-      {/* Error state */}
       {fetchError && (
         <div className="rounded-xl py-10 text-center" style={{ border: '1px dashed #450a0a' }}>
           <p className="text-red-400 text-sm">Failed to load scores.</p>
@@ -108,7 +200,6 @@ export default function B30Grid() {
         </div>
       )}
 
-      {/* Grid — shown while loading or when scores exist */}
       {!fetchError && (loading || scores.length > 0) && (
         <div className="overflow-x-auto pb-2">
           <div
@@ -125,6 +216,15 @@ export default function B30Grid() {
             }
           </div>
         </div>
+      )}
+
+      {exportReady && (
+        <ExportView
+          exportRef={exportRef}
+          scores={scores}
+          username={username}
+          coverDataUrls={coverDataUrls}
+        />
       )}
 
       {step === 1 && (
@@ -154,4 +254,6 @@ export default function B30Grid() {
       )}
     </div>
   )
-}
+})
+
+export default B30Grid

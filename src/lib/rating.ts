@@ -2,7 +2,7 @@ import type { Lamp } from '@/types'
 
 export function calcSongRating(score: number, chartConst: number): number {
   if (score >= 1_009_000) return chartConst + 2.15
-  if (score >= 1_007_500) return chartConst + 2.00 + (score - 1_007_500) / 10_000 * 0.15
+  if (score >= 1_007_500) return chartConst + 2.00 + (score - 1_007_500) / 10_000
   if (score >= 1_005_000) return chartConst + 1.50 + (score - 1_005_000) /  2_500 * 0.50
   if (score >= 1_000_000) return chartConst + 1.00 + (score - 1_000_000) /  5_000 * 0.50
   if (score >=   975_000) return chartConst +        (score -   975_000) / 25_000

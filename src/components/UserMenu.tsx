@@ -10,9 +10,11 @@ interface Props {
   username: string
   email: string
   avatarUrl: string | null
+  onExport: () => void
+  exporting: boolean
 }
 
-export default function UserMenu({ userId, username, email, avatarUrl }: Props) {
+export default function UserMenu({ userId, username, email, avatarUrl, onExport, exporting }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [currentAvatar, setCurrentAvatar] = useState(avatarUrl)
@@ -140,6 +142,17 @@ export default function UserMenu({ userId, username, email, avatarUrl }: Props) 
               {uploadError && (
                 <p className="mt-1.5 text-xs text-red-400">{uploadError}</p>
               )}
+            </div>
+
+            {/* Export */}
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid #2a2a40' }}>
+              <button
+                onClick={() => { setOpen(false); onExport() }}
+                disabled={exporting}
+                className="w-full text-left text-sm text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+              >
+                {exporting ? '⏳  生成中…' : '🖼️  分享分表'}
+              </button>
             </div>
 
             {/* Sign out */}
